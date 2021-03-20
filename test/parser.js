@@ -1,7 +1,8 @@
 import Calculator from '../index.js';
 import assert from 'assert/strict';
+import mpWasm from 'mp-wasm';
 
-const calc = new Calculator();
+const calc = new Calculator(mpWasm);
 
 const tests = [
   {

@@ -1,14 +1,24 @@
+let mpf;
 class Calculator {
-  constructor() {
+  // mpWasm is https://github.com/cag/mp-wasm
+  // We make it provided externally to support multiple platforms.
+  constructor(mpWasm) {
     this.parser = new Parser();
-    this.evaluator = new Evaluator(this.parser);
+    this.evaluator = new Evaluator();
+    mpf = mpWasm.mpf;
   }
+
+  // Returns:
+  // - result: a list of MPFR numbers.
+  // - tree: the abstract syntax tree representation of the input.
+  // - errors: a list of errors in parsing or evaluating the input.
   compute(input) {
     const syntax = this.parser.parse(input);
     if (syntax.errors.length > 0) {
       return { result: null, tree: syntax.tree, errors: syntax.errors };
     }
-    return this.evaluator.eval(syntax.tree);
+    const { result, errors } = this.evaluator.eval(syntax.tree);
+    return { result, tree: syntax.tree, errors };
   }
 }
 
@@ -122,7 +132,7 @@ class SyntaxTree {
     const rest = this.read(this.text.length);
     const match = SyntaxTreeNode.token.number.exec(rest);
     this.advance(match[0].length);
-    node.number = Number(match[0].replace(/_/g, ''));
+    node.number = mpf(match[0].replace(/_/g, ''));
 
     this.closeNode(node);
     return node;
@@ -235,6 +245,63 @@ class SyntaxTreeNode {
     this.endColumn = node.endColumn;
   }
 
+  // Returns:
+  // - result: a list of MPFR numbers.
+  // - errors: a list of errors in evaluating the node.
+  eval() {
+    const childrenEval = this.children.map(c => c.eval());
+    const childrenValues = childrenEval.map(c => c.result)
+      .reduce((list, val) => list.concat(val), []);
+    const result = [], errors = [];
+    switch (this.type) {
+      case SyntaxTreeNode.type.root:
+      case SyntaxTreeNode.type.expr:
+        result.push(mpf(0));
+        break;
+      case SyntaxTreeNode.type.number:
+        result.push(mpf(this.number || 0));
+        break;
+      case SyntaxTreeNode.type.paren:
+      case SyntaxTreeNode.type.sep:
+        result.push(...childrenValues);
+        break;
+      case SyntaxTreeNode.type.prefixOp:
+        switch (this.operator) {
+          case "add":
+          case "sub":
+            result.push(mpf[this.operator](0, childrenValues[0]));
+            break;
+          default:
+            throw new Error(`Invalid prefix operator ${this.operator}`);
+        }
+        break;
+      case SyntaxTreeNode.type.infixOp:
+        result.push(childrenValues.reduce((sum, arg) => sum[this.operator](arg)));
+        break;
+      case SyntaxTreeNode.type.postfixOp:
+        if (!childrenValues[0][this.operator]) {
+          throw new Error(`Invalid postfix operator ${this.operator}`);
+        }
+        result.push(childrenValues[0][this.operator]());
+        break;
+      case SyntaxTreeNode.type.binFunc:
+        result.push(mpf[this.operator](childrenValues[0], childrenValues[1]));
+        break;
+      case SyntaxTreeNode.type.unaFunc:
+        const operator = {
+          "ln": "log",
+          "factorial": "fac",
+        }[this.operator] || this.operator;
+        result.push(mpf[operator](childrenValues[0]));
+        break;
+      default:
+        throw new Error("Invalid evaluation " +
+          "of nonexistent node type " + this.type);
+    }
+    childrenEval.forEach(c => errors.push(...c.errors));
+    return { result, errors };
+  }
+
   toString() {
     const info =
       (this.type === SyntaxTreeNode.type.number)?       this.number   + ' ':
@@ -312,11 +379,8 @@ SyntaxTreeNode.funcFromOperator = {
 };
 
 class Evaluator {
-  constructor(mpf = this.mpf) { this.mpf = mpf; }
-
   eval(tree) {
-    const result = null, errors = [];
-    return { result, tree, errors };
+    return tree.root.eval();
   }
 }
 
