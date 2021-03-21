@@ -71,4 +71,4 @@ export default function parserTests() {
       `Errors in test "${test.name}": ${result.errors}`);
     assert.equal(result.tree.toString(), test.tree, test.name);
   });
-};
+}

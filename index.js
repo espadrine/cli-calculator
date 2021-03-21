@@ -55,6 +55,7 @@ class SyntaxTree {
     const rest = this.read(this.text.length);
     const type = SyntaxTreeNode.nameFromType.findIndex(type =>
       SyntaxTreeNode.token[type].test(rest));
+    let subExpr;
     switch (type) {
       case SyntaxTreeNode.type.number:
         node = this.parseNumber();
@@ -68,8 +69,8 @@ class SyntaxTree {
         node.type = type;
         node.operator = SyntaxTreeNode.funcFromOperator[this.read()];
         this.advance();
-        const prefixExpr = this.parseExpr();
-        node.children = [prefixExpr];
+        subExpr = this.parseExpr();
+        node.children = [subExpr];
         break;
       case SyntaxTreeNode.type.binFunc:
       case SyntaxTreeNode.type.unaFunc:
@@ -253,6 +254,7 @@ class SyntaxTreeNode {
     const childrenValues = childrenEval.map(c => c.result)
       .reduce((list, val) => list.concat(val), []);
     const result = [], errors = [];
+    let operator;
     switch (this.type) {
       case SyntaxTreeNode.type.root:
       case SyntaxTreeNode.type.expr:
@@ -288,7 +290,7 @@ class SyntaxTreeNode {
         result.push(mpf[this.operator](childrenValues[0], childrenValues[1]));
         break;
       case SyntaxTreeNode.type.unaFunc:
-        const operator = {
+        operator = {
           "ln": "log",
           "factorial": "fac",
         }[this.operator] || this.operator;
@@ -350,8 +352,8 @@ SyntaxTreeNode.type = {
 SyntaxTreeNode.nameFromType = Object.keys(SyntaxTreeNode.type);
 
 SyntaxTreeNode.token = {
-  root:         /[]/,
-  expr:         /[]/,
+  root:         new RegExp("[]"),
+  expr:         new RegExp("[]"),
   number:       /^[0-9_]+(\.[0-9_]+)?([eE][0-9_]+)?/,
   paren:        /^\(/,
   sep:          /^,/,

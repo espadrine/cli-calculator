@@ -2,7 +2,6 @@ import Calculator from '../index.js';
 import assert from 'assert/strict';
 import mpWasm from 'mp-wasm';
 
-const {mpf} = mpWasm;
 const calc = new Calculator(mpWasm);
 
 const tests = [
@@ -26,4 +25,4 @@ export default function computerTests() {
     assert.deepEqual(computation.result.map(v => v.toString()).join(', '),
       test.result, test.name);
   });
-};
+}
