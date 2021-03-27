@@ -20,6 +20,13 @@ class Calculator {
     const { result, errors } = this.evaluator.eval(syntax.tree);
     return { result, tree: syntax.tree, errors };
   }
+
+  // Returns:
+  // - tree: the abstract syntax tree representation of the input.
+  // - errors: a list of errors in parsing the input.
+  parse(input) {
+    return this.parser.parse(input);
+  }
 }
 
 class Parser {
@@ -121,6 +128,25 @@ class SyntaxTree {
     }
 
     // Postfix operators.
+    this.skipWhitespace();
+    while (SyntaxTreeNode.token.postfixOp.test(this.read())) {
+      const operator = SyntaxTreeNode.funcFromOperator[this.read()];
+      if (!operator) {
+        throw new Error(`Invalid operator type ${this.read()}`);
+      }
+
+      // The expression to return is a postfix operation.
+      const operand = node;
+      this.closeNode(operand);
+
+      node = this.newNode(SyntaxTreeNode.type.postfixOp);
+      node.startAlong(operand);
+      node.operator = operator;
+      this.advance();
+      node.children = [operand];
+      this.closeNode(node);
+      this.skipWhitespace();
+    }
 
     return node;
   }

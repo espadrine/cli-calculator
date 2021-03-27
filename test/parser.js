@@ -62,11 +62,39 @@ const tests = [
       `  1:3-1:6 number 128 "128"`,
     ].join('\n'),
   },
+  {
+    name: "Postfix test",
+    expr: "3!",
+    tree: [
+      `1:1-1:3 postfixOp fac "3!"`,
+      `  1:1-1:2 number 3 "3"`,
+    ].join('\n'),
+  },
+  {
+    name: "Double postfix test",
+    expr: "3!!",
+    tree: [
+      `1:1-1:4 postfixOp fac "3!!"`,
+      `  1:1-1:3 postfixOp fac "3!"`,
+      `    1:1-1:2 number 3 "3"`,
+    ].join('\n'),
+  },
+  {
+    name: "Parenthesized postfix test",
+    expr: "(4-2)!",
+    tree: [
+      `1:1-1:7 postfixOp fac "(4-2)!"`,
+      `  1:1-1:6 paren "(4-2)"`,
+      `    1:2-1:5 infixOp sub "4-2"`,
+      `      1:2-1:3 number 4 "4"`,
+      `      1:4-1:5 number 2 "2"`,
+    ].join('\n'),
+  },
 ];
 
 export default function parserTests() {
   tests.forEach(test => {
-    const result = calc.compute(test.expr);
+    const result = calc.parse(test.expr);
     assert(result.errors.length === 0,
       `Errors in test "${test.name}": ${result.errors}`);
     assert.equal(result.tree.toString(), test.tree, test.name);
