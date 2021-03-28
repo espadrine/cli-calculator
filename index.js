@@ -307,10 +307,16 @@ class SyntaxTreeNode {
         result.push(childrenValues.reduce((sum, arg) => sum[this.operator](arg)));
         break;
       case SyntaxTreeNode.type.postfixOp:
-        if (!childrenValues[0][this.operator]) {
+        if (!mpf[this.operator]) {
           throw new Error(`Invalid postfix operator ${this.operator}`);
         }
-        result.push(childrenValues[0][this.operator]());
+        if (this.operator === 'fac') {
+          // The factorial function is nonfunctional in mp-wasm,
+          // see https://github.com/cag/mp-wasm/issues/3
+          result.push(mpf.gamma(childrenValues[0].add(1)));
+        } else {
+          result.push(mpf[this.operator](childrenValues[0]));
+        }
         break;
       case SyntaxTreeNode.type.binFunc:
         result.push(mpf[this.operator](childrenValues[0], childrenValues[1]));

@@ -15,6 +15,16 @@ const tests = [
     expr: "2^128",
     result: "3.402823669209385e+38",
   },
+  {
+    name: "Double postfix test",
+    expr: "3!!",
+    result: "720",
+  },
+  {
+    name: "Parenthesized postfix test",
+    expr: "(4-2)!",
+    result: "2",
+  },
 ];
 
 export default function computerTests() {
