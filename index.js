@@ -74,14 +74,13 @@ class SyntaxTree {
         break;  // End of the expression.
       case SyntaxTreeNode.type.prefixOp:
         node.type = type;
-        node.operator = SyntaxTreeNode.funcFromOperator[this.read()];
+        node.func = SyntaxTreeNode.funcFromOperator[this.read()];
         this.advance();
         subExpr = this.parseExpr();
         node.children = [subExpr];
         break;
-      case SyntaxTreeNode.type.binFunc:
-      case SyntaxTreeNode.type.unaFunc:
-        node.children.push(this.parseFunction(type));
+      case SyntaxTreeNode.type.func:
+        node = this.parseFunction(type);
         break;
       default:
         this.addError("Invalid expression");
@@ -99,11 +98,10 @@ class SyntaxTree {
 
       // The expression to return is an infix operation.
       const firstOperand = node;
-      this.closeNode(firstOperand);
 
       node = this.newNode(SyntaxTreeNode.type.infixOp);
       node.startAlong(firstOperand);
-      node.operator = operator;
+      node.func = operator;
       this.advance();
 
       const secondOperand = this.parseExpr();
@@ -111,17 +109,17 @@ class SyntaxTree {
 
       // Handle associativity.
       if (secondOperand.type === SyntaxTreeNode.token.infixOp &&
-          SyntaxTreeNode.operatorAssociativity.get(              operator) >
-          SyntaxTreeNode.operatorAssociativity.get(secondOperand.operator)) {
+          SyntaxTreeNode.operatorAssociativity.get(operator) >
+          SyntaxTreeNode.operatorAssociativity.get(secondOperand.func)) {
         // In this situation, we must promote the second operator to toplevel.
         //    [firstOperand <operator> [second[0] <secondOperator> second[1]]]
         // → [[firstOperand <operator> second[0]] <secondOperator> second[1]]
         const newFirstOperand = this.newNode(SyntaxTreeNode.type.infixOp);
         newFirstOperand.startAlong(firstOperand);
         newFirstOperand.endAlong(secondOperand.children[0]);
-        newFirstOperand.operator = operator;
+        newFirstOperand.func = operator;
         newFirstOperand.children = [firstOperand, secondOperand.children[0]];
-        node.operator = secondOperand.operator;
+        node.func = secondOperand.func;
         node.children = [newFirstOperand, secondOperand.children[1]];
       }
       this.closeNode(node);
@@ -141,7 +139,7 @@ class SyntaxTree {
 
       node = this.newNode(SyntaxTreeNode.type.postfixOp);
       node.startAlong(operand);
-      node.operator = operator;
+      node.func = operator;
       this.advance();
       node.children = [operand];
       this.closeNode(node);
@@ -174,12 +172,11 @@ class SyntaxTree {
       throw new Error("Invalid paren does not start with a parenthesis");
     }
     this.advance();
-    this.skipWhitespace();
 
     let closingParenReached = false;
     while (!closingParenReached && this.cursor < this.text.length) {
-      node.children.push(this.parseExpr());
       this.skipWhitespace();
+      node.children.push(this.parseExpr());
       switch (this.read()) {
         case ',':
           this.advance();
@@ -194,6 +191,25 @@ class SyntaxTree {
           this.advance();
       }
     }
+    this.closeNode(node);
+    return node;
+  }
+
+  // Expression of the form "func(…, …)"
+  parseFunction() {
+    this.skipWhitespace();
+    const node = this.newNode(SyntaxTreeNode.type.func);
+
+    const rest = this.read(this.text.length);
+    const funcMatch = SyntaxTreeNode.token.func.exec(rest);
+    if (funcMatch == null) {
+      throw new Error("Invalid function name");
+    }
+    node.func = funcMatch[0];
+    this.advance(node.func.length);
+    const args = this.parseParen();
+    node.children = args.children;
+
     this.closeNode(node);
     return node;
   }
@@ -252,7 +268,7 @@ class SyntaxTreeNode {
     this.type = type;
     this.text = text;
     this.children = [];
-    this.operator = null;
+    this.func = null;
     this.number = null;
     this.start = start;
     this.end = end;
@@ -294,39 +310,36 @@ class SyntaxTreeNode {
         result.push(...childrenValues);
         break;
       case SyntaxTreeNode.type.prefixOp:
-        switch (this.operator) {
+        switch (this.func) {
           case "add":
           case "sub":
-            result.push(mpf[this.operator](0, childrenValues[0]));
+            result.push(mpf[this.func](0, childrenValues[0]));
             break;
           default:
-            throw new Error(`Invalid prefix operator ${this.operator}`);
+            throw new Error(`Invalid prefix operator ${this.func}`);
         }
         break;
       case SyntaxTreeNode.type.infixOp:
-        result.push(childrenValues.reduce((sum, arg) => sum[this.operator](arg)));
+        result.push(childrenValues.reduce((sum, arg) => sum[this.func](arg)));
         break;
       case SyntaxTreeNode.type.postfixOp:
-        if (!mpf[this.operator]) {
-          throw new Error(`Invalid postfix operator ${this.operator}`);
+        if (!mpf[this.func]) {
+          throw new Error(`Invalid postfix operator ${this.func}`);
         }
-        if (this.operator === 'fac') {
+        if (this.func === 'fac') {
           // The factorial function is nonfunctional in mp-wasm,
           // see https://github.com/cag/mp-wasm/issues/3
           result.push(mpf.gamma(childrenValues[0].add(1)));
         } else {
-          result.push(mpf[this.operator](childrenValues[0]));
+          result.push(mpf[this.func](childrenValues[0]));
         }
         break;
-      case SyntaxTreeNode.type.binFunc:
-        result.push(mpf[this.operator](childrenValues[0], childrenValues[1]));
-        break;
-      case SyntaxTreeNode.type.unaFunc:
+      case SyntaxTreeNode.type.func:
         operator = {
           "ln": "log",
           "factorial": "fac",
-        }[this.operator] || this.operator;
-        result.push(mpf[operator](childrenValues[0]));
+        }[this.func] || this.func;
+        result.push(mpf[this.func](...childrenValues));
         break;
       default:
         throw new Error("Invalid evaluation " +
@@ -338,10 +351,11 @@ class SyntaxTreeNode {
 
   toString() {
     const info =
-      (this.type === SyntaxTreeNode.type.number)?       this.number   + ' ':
-      (this.type === SyntaxTreeNode.type.prefixOp)?     this.operator + ' ':
-      (this.type === SyntaxTreeNode.type.infixOp)?      this.operator + ' ':
-      (this.type === SyntaxTreeNode.type.postfixOp)?    this.operator + ' ':
+      (this.type === SyntaxTreeNode.type.number)?       this.number + ' ':
+      (this.type === SyntaxTreeNode.type.prefixOp  ||
+       this.type === SyntaxTreeNode.type.infixOp   ||
+       this.type === SyntaxTreeNode.type.postfixOp ||
+       this.type === SyntaxTreeNode.type.func)?         this.func   + ' ':
       '';
     const curText =
       `${this.startLine}:${this.startColumn}-` +
@@ -378,8 +392,7 @@ SyntaxTreeNode.type = {
   prefixOp:     5,
   infixOp:      6,
   postfixOp:    7,
-  binFunc:      8,
-  unaFunc:      9,
+  func:         8,
 };
 SyntaxTreeNode.nameFromType = Object.keys(SyntaxTreeNode.type);
 
@@ -392,8 +405,7 @@ SyntaxTreeNode.token = {
   prefixOp:     /^[+-]/,
   infixOp:      /^([+\-*×/÷%^]|\*\*)/,  // If you add an operator, add its precedence in operatorAssociativity.
   postfixOp:    /^[!]/,
-  binFunc:      /^(rootn|dim|atan2|gammaInc|beta|jn|yn|agm|hypot|fmod|remainder|min|max)\b/,
-  unaFunc:      /^(sqr|sqrt|recSqrt|cbrt|neg|abs|log|ln|log2|log10|log1p|exp|exp2|exp10|expm1|cos|sin|tan|sec|csc|cot|acos|asin|atan|cosh|sinh|tanh|sech|csch|coth|acosh|asinh|atanh|fac|factorial|eint|li2|gamma|lngamma|digamma|zeta|erf|erfc|j0|j1|y0|y1|rint|rintCeil|rintFloor|rintRound|rintRoundeven|rintTrunc|frac)\b/,
+  func:         /^(rootn|dim|atan2|gammaInc|beta|jn|yn|agm|hypot|fmod|remainder|min|max|sqr|sqrt|recSqrt|cbrt|neg|abs|log|ln|log2|log10|log1p|exp|exp2|exp10|expm1|cos|sin|tan|sec|csc|cot|acos|asin|atan|cosh|sinh|tanh|sech|csch|coth|acosh|asinh|atanh|fac|factorial|eint|li2|gamma|lngamma|digamma|zeta|erf|erfc|j0|j1|y0|y1|rint|rintCeil|rintFloor|rintRound|rintRoundeven|rintTrunc|frac)\b/,
 };
 
 SyntaxTreeNode.operators = [..."+-*×/÷%^", "**", "!"];

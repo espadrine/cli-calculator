@@ -90,6 +90,16 @@ const tests = [
       `      1:4-1:5 number 2 "2"`,
     ].join('\n'),
   },
+  {
+    name: "Unary function test",
+    expr: "log10(1e5) + 1",
+    tree: [
+      `1:1-1:15 infixOp add "log10(1e5) + 1"`,
+      `  1:1-1:11 func log10 "log10(1e5)"`,
+      `    1:7-1:10 number 100000 "1e5"`,
+      `  1:14-1:15 number 1 "1"`,
+    ].join('\n'),
+  },
 ];
 
 export default function parserTests() {
