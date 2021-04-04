@@ -25,6 +25,11 @@ const tests = [
     expr: "(4-2)!",
     result: "2",
   },
+  {
+    name: "Unary function test",
+    expr: "log10(1e5) + 1",
+    result: "6",
+  },
 ];
 
 export default function computerTests() {
