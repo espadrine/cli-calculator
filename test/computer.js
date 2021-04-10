@@ -30,6 +30,11 @@ const tests = [
     expr: "log10(1e5) + 1",
     result: "6",
   },
+  {
+    name: "Binary function test",
+    expr: "max(13.2, 4*5)",
+    result: "20",
+  },
 ];
 
 export default function computerTests() {

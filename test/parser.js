@@ -100,6 +100,17 @@ const tests = [
       `  1:14-1:15 number 1 "1"`,
     ].join('\n'),
   },
+  {
+    name: "Binary function test",
+    expr: "max(13.2, 4*5)",
+    tree: [
+      `1:1-1:15 func max "max(13.2, 4*5)"`,
+      `  1:5-1:9 number 13.2 "13.2"`,
+      `  1:11-1:14 infixOp mul "4*5"`,
+      `    1:11-1:12 number 4 "4"`,
+      `    1:13-1:14 number 5 "5"`,
+    ].join('\n'),
+  },
 ];
 
 export default function parserTests() {
