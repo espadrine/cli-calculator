@@ -3,6 +3,7 @@ import assert from 'assert/strict';
 import mpWasm from 'mp-wasm';
 
 const calc = new Calculator(mpWasm);
+calc.mpf.setDefaultPrec(128);
 
 const tests = [
   {
@@ -109,6 +110,16 @@ const tests = [
       `  1:11-1:14 infixOp mul "4*5"`,
       `    1:11-1:12 number 4 "4"`,
       `    1:13-1:14 number 5 "5"`,
+    ].join('\n'),
+  },
+  {
+    name: "Function with aliased name test",
+    expr: "round(9.995 * 100)",
+    tree: [
+      `1:1-1:19 func round "round(9.995 * 100)"`,
+      `  1:7-1:18 infixOp mul "9.995 * 100"`,
+      `    1:7-1:12 number 9.995 "9.995"`,
+      `    1:15-1:18 number 100 "100"`,
     ].join('\n'),
   },
 ];

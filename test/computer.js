@@ -3,6 +3,7 @@ import assert from 'assert/strict';
 import mpWasm from 'mp-wasm';
 
 const calc = new Calculator(mpWasm);
+calc.mpf.setDefaultPrec(128);
 
 const tests = [
   {
@@ -13,7 +14,7 @@ const tests = [
   {
     name: "Infix test",
     expr: "2^128",
-    result: "3.402823669209385e+38",
+    result: "340282366920938463463374607431768211456",
   },
   {
     name: "Double postfix test",
@@ -34,6 +35,11 @@ const tests = [
     name: "Binary function test",
     expr: "max(13.2, 4*5)",
     result: "20",
+  },
+  { // Don't try this at home.
+    name: "Precision function test",
+    expr: "round(9.995 * 100)",
+    result: "1000",
   },
 ];
 
