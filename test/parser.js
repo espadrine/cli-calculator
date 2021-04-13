@@ -122,13 +122,73 @@ const tests = [
       `    1:15-1:18 number 100 "100"`,
     ].join('\n'),
   },
+  {
+    name: "Single parenthesis test",
+    expr: "(1)",
+    tree: [
+      `1:1-1:4 paren "(1)"`,
+      `  1:2-1:3 number 1 "1"`,
+    ].join('\n'),
+  },
+  {
+    name: "Two-element parenthesis test",
+    expr: "(1, 2)",
+    tree: [
+      `1:1-1:7 paren "(1, 2)"`,
+      `  1:2-1:3 number 1 "1"`,
+      `  1:5-1:6 number 2 "2"`,
+    ].join('\n'),
+  },
+  {
+    name: "Empty parentheses test",
+    expr: "()",
+    errors: [
+      "1:2: Invalid expression",
+      "1:3: Invalid character in parenthesized expression",
+    ],
+  },
+  {
+    name: "Function without parameters test",
+    expr: "round",
+    errors: [
+      "1:6: Invalid function with no parameters",
+    ],
+  },
+  {
+    name: "Prefix operator without second operand test",
+    expr: "+",
+    errors: [
+      "1:2: Invalid expression",
+    ],
+  },
+  {
+    name: "Infix operator without second operand test",
+    expr: "1+",
+    errors: [
+      "1:3: Invalid expression",
+    ],
+  },
+  {
+    name: "Postfix operator without second operand test",
+    expr: "!",
+    errors: [
+      "1:1: Invalid expression",
+    ],
+  },
 ];
 
 export default function parserTests() {
   tests.forEach(test => {
     const result = calc.parse(test.expr);
-    assert(result.errors.length === 0,
-      `Errors in test "${test.name}": ${result.errors}`);
-    assert.equal(result.tree.toString(), test.tree, test.name);
+    if (test.tree) {
+      assert(result.errors.length === 0,
+        `Errors in test "${test.name}": ${result.errors}`);
+      assert.equal(result.tree.toString(), test.tree, test.name);
+    } else if (test.errors) {
+      assert.deepEqual(
+        result.errors.map(e => e.toString()), test.errors, test.name);
+    } else {
+      throw new Error(`Invalid test ${test.name}`);
+    }
   });
 }

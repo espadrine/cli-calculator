@@ -41,6 +41,16 @@ const tests = [
     expr: "round(9.995 * 100)",
     result: "1000",
   },
+  {
+    name: "Single parenthesis test",
+    expr: "(1)",
+    result: "1",
+  },
+  {
+    name: "Two-element parenthesis test",
+    expr: "(1, + 1 + 1)",
+    result: "1, 2",
+  },
 ];
 
 export default function computerTests() {

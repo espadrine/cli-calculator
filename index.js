@@ -207,6 +207,13 @@ class SyntaxTree {
     }
     node.func = funcMatch[0];
     this.advance(node.func.length);
+    this.skipWhitespace();
+    if (this.read() !== '(') {
+      this.addError("Invalid function with no parameters");
+      this.advance();
+      this.closeNode(node);
+      return node;
+    }
     const args = this.parseParen();
     node.children = args.children;
 
@@ -337,7 +344,6 @@ class SyntaxTreeNode {
       case SyntaxTreeNode.type.func:
         operator = {
           "ln": "log",
-          "factorial": "fac",
           "round": "rintRound",
           "floor": "rintFloor",
           "ceil": "rintCeil",
@@ -409,7 +415,7 @@ SyntaxTreeNode.token = {
   prefixOp:     /^[+-]/,
   infixOp:      /^([+\-*×/÷%^]|\*\*)/,  // If you add an operator, add its precedence in operatorAssociativity.
   postfixOp:    /^[!]/,
-  func:         /^(rootn|dim|atan2|gammaInc|beta|jn|yn|agm|hypot|fmod|remainder|min|max|sqr|sqrt|recSqrt|cbrt|neg|abs|log|ln|log2|log10|log1p|exp|exp2|exp10|expm1|cos|sin|tan|sec|csc|cot|acos|asin|atan|cosh|sinh|tanh|sech|csch|coth|acosh|asinh|atanh|fac|factorial|eint|li2|gamma|lngamma|digamma|zeta|erf|erfc|j0|j1|y0|y1|rint|ceil|rintCeil|floor|rintFloor|round|rintRound|rintRoundeven|trunc|rintTrunc|frac)\b/,
+  func:         /^(rootn|dim|atan2|gammaInc|beta|jn|yn|agm|hypot|fmod|remainder|min|max|sqr|sqrt|recSqrt|cbrt|neg|abs|log|ln|log2|log10|log1p|exp|exp2|exp10|expm1|cos|sin|tan|sec|csc|cot|acos|asin|atan|cosh|sinh|tanh|sech|csch|coth|acosh|asinh|atanh|eint|li2|gamma|lngamma|digamma|zeta|erf|erfc|j0|j1|y0|y1|rint|ceil|rintCeil|floor|rintFloor|round|rintRound|rintRoundeven|trunc|rintTrunc|frac)\b/,
 };
 
 SyntaxTreeNode.operators = [..."+-*×/÷%^", "**", "!"];
