@@ -1,7 +1,7 @@
 {
-  "name": "cli-calculator",
+  "name": "precision-calculator",
   "version": "1.0.0",
-  "description": "CLI arbitrary precision calculator with all MPFR functions.",
+  "description": "Arbitrary precision calculator with all MPFR functions.",
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/espadrine/cli-calculator.git"
+    "url": "git+https://github.com/espadrine/precision-calculator.git"
   },
   "keywords": [
     "CLI",
@@ -21,9 +21,9 @@
   "author": "Thaddée Tyl",
   "license": "EUPL-1.2",
   "bugs": {
-    "url": "https://github.com/espadrine/cli-calculator/issues"
+    "url": "https://github.com/espadrine/precision-calculator/issues"
   },
-  "homepage": "https://github.com/espadrine/cli-calculator#readme",
+  "homepage": "https://github.com/espadrine/precision-calculator#readme",
   "dependencies": {
     "mp-wasm": "^0.4.0"
   },
